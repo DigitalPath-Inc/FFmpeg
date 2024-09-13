@@ -2462,9 +2462,9 @@ static int h264_annexb_insert_sps_pps(AVFormatContext *s, AVPacket *pkt)
 
     /* Discover NALU type from packet. */
     buf_end  = pkt->data + pkt->size;
-    for (buf = ff_avc_find_startcode(pkt->data, buf_end); buf < buf_end; buf += nal_size) {
+    for (buf = ff_nal_find_startcode(pkt->data, buf_end); buf < buf_end; buf += nal_size) {
         while (!*(buf++));
-        r1 = ff_avc_find_startcode(buf, buf_end);
+        r1 = ff_nal_find_startcode(buf, buf_end);
         if ((nal_size = r1 - buf) > 0) {
             unit_type = *buf & 0x1f;
             if (unit_type == H264_NAL_SPS) {
