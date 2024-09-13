@@ -2505,9 +2505,9 @@ static int h264_annexb_insert_sps_pps(AVFormatContext *s, AVPacket *pkt)
     memcpy(pkt->data, par->extradata, par->extradata_size);
     out = pkt->data + par->extradata_size;
     buf_end  = in->data + in->size;
-    for (buf = ff_avc_find_startcode(in->data, buf_end); buf < buf_end; buf += nal_size) {
+    for (buf = ff_nal_find_startcode(in->data, buf_end); buf < buf_end; buf += nal_size) {
         while (!*(buf++));
-        r1 = ff_avc_find_startcode(buf, buf_end);
+        r1 = ff_nal_find_startcode(buf, buf_end);
         if ((nal_size = r1 - buf) > 0) {
             AV_WB24(out, 0x00001);
             memcpy(out + 3, buf, nal_size);
