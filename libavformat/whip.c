@@ -36,6 +36,7 @@
 #include "libavutil/time.h"
 #include "libavutil/mem.h"
 #include "avc.h"
+#include "nal.h"
 #include "avio_internal.h"
 #include "http.h"
 #include "internal.h"
@@ -1285,7 +1286,7 @@ static int parse_profile_level(AVFormatContext *s, AVCodecParameters *par)
         if (r >= end)
             break;
 
-        r1 = ff_avc_find_startcode(r, end);
+        r1 = ff_nal_find_startcode(r, end);
         if ((state & 0x1f) == H264_NAL_SPS) {
             ret = ff_avc_decode_sps(sps, r, r1 - r);
             if (ret < 0) {
