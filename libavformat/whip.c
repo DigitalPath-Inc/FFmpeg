@@ -25,6 +25,7 @@
 #include "libavcodec/avcodec.h"
 #include "libavcodec/h264.h"
 #include "libavcodec/startcode.h"
+#include "libavcodec/codec_desc.h"
 #include "libavutil/base64.h"
 #include "libavutil/bprint.h"
 #include "libavutil/crc.h"
