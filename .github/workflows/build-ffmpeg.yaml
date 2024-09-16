@@ -1,0 +1,45 @@
+name: Build ffmpeg packages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential yasm nasm libx264-dev
+
+      - name: Configure FFmpeg
+        run: |
+          ./configure --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree
+
+      - name: Build FFmpeg
+        run: |
+          make -j$(nproc)
+
+      - name: Create Debian package
+        run: |
+          mkdir -p debian/DEBIAN
+          echo "Package: ffmpeg-custom" > debian/DEBIAN/control
+          echo "Version: 1.0.0" >> debian/DEBIAN/control
+          echo "Architecture: amd64" >> debian/DEBIAN/control
+          echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
+          echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
+          mkdir -p debian/usr/local/bin
+          cp ffmpeg ffprobe debian/usr/local/bin/
+          dpkg-deb --build debian ffmpeg-custom.deb
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ffmpeg-custom
+          path: ffmpeg-custom.deb
