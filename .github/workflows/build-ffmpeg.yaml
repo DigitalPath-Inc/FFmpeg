@@ -1,8 +1,8 @@
-name: Build ffmpeg packages
+name: Build ffmpeg-webrtc packages
 
 on:
   release:
-    types: [published, edited, prereleased]
+    types: [published, created]
 
 jobs:
   build:
@@ -27,14 +27,14 @@ jobs:
       - name: Create Debian package
         run: |
           mkdir -p debian/DEBIAN
-          echo "Package: ffmpeg-custom" > debian/DEBIAN/control
+          echo "Package: ffmpeg-webrtc" > debian/DEBIAN/control
           echo "Version: $(echo ${{ github.ref_name }} | sed 's/^v//')" >> debian/DEBIAN/control
           echo "Architecture: amd64" >> debian/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
-          echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
+          echo "Description: Custom FFmpeg build with WebRTC support" >> debian/DEBIAN/control
           mkdir -p debian/usr/local/bin
           cp ffmpeg ffprobe debian/usr/local/bin/
-          dpkg-deb --build --root-owner-group -Zgzip debian ffmpeg-custom.deb
+          dpkg-deb --build debian ffmpeg-custom.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
