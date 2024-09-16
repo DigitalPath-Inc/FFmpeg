@@ -14,7 +14,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-dev
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev
 
       - name: Configure FFmpeg
         run: |
@@ -32,9 +32,11 @@ jobs:
           echo "Architecture: amd64" >> debian/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
           echo "Description: Custom FFmpeg build with WebRTC support" >> debian/DEBIAN/control
+          echo "Depends: libssl3, libx264-163" >> debian/DEBIAN/control
           mkdir -p debian/usr/local/bin
-          cp ffmpeg ffprobe debian/usr/local/bin/
-          dpkg-deb --build debian ffmpeg-custom.deb
+          cp ffmpeg debian/usr/local/bin/ffmpeg-webrtc
+          cp ffprobe debian/usr/local/bin/ffprobe-webrtc
+          dpkg-deb --build --root-owner-group -Zgzip debian ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -42,6 +44,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./ffmpeg-custom.deb
-          asset_name: ffmpeg-custom-${{ github.ref_name }}.deb
+          asset_path: ./ffmpeg-webrtc.deb
+          asset_name: ffmpeg-webrtc-${{ github.ref_name }}.deb
           asset_content_type: application/vnd.debian.binary-package
