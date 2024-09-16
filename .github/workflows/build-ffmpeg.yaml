@@ -1,10 +1,8 @@
 name: Build ffmpeg packages
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -30,7 +28,7 @@ jobs:
         run: |
           mkdir -p debian/DEBIAN
           echo "Package: ffmpeg-custom" > debian/DEBIAN/control
-          echo "Version: 1.0.0" >> debian/DEBIAN/control
+          echo "Version: ${{ github.ref_name }}" >> debian/DEBIAN/control
           echo "Architecture: amd64" >> debian/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
           echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
@@ -38,8 +36,12 @@ jobs:
           cp ffmpeg ffprobe debian/usr/local/bin/
           dpkg-deb --build debian ffmpeg-custom.deb
 
-      - name: Upload Debian package
-        uses: actions/upload-artifact@v3
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ffmpeg-custom
-          path: ffmpeg-custom.deb
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./ffmpeg-custom.deb
+          asset_name: ffmpeg-custom-${{ github.ref_name }}.deb
+          asset_content_type: application/vnd.debian.binary-package
