@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p debian/DEBIAN
           echo "Package: ffmpeg-custom" > debian/DEBIAN/control
-          echo "Version: ${{ github.ref_name }}" >> debian/DEBIAN/control
+          echo "Version: $(echo ${{ github.ref_name }} | sed 's/^v//')" >> debian/DEBIAN/control
           echo "Architecture: amd64" >> debian/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
           echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
