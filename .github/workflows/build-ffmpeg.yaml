@@ -34,7 +34,7 @@ jobs:
           echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
           mkdir -p debian/usr/local/bin
           cp ffmpeg ffprobe debian/usr/local/bin/
-          dpkg-deb --build debian ffmpeg-custom.deb
+          dpkg-deb --build --root-owner-group -Zgzip debian ffmpeg-custom.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
