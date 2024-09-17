@@ -1,4 +1,4 @@
-name: Build ffmpeg-webrtc packages
+name: Build ffmpeg-custom packages
 
 on:
   release:
@@ -21,48 +21,26 @@ jobs:
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
+          ./configure --prefix=/usr/local --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
 
       - name: Build FFmpeg
         run: |
           make -j$(nproc)
-          make install DESTDIR=$(pwd)/build
 
       - name: Prepare package
         run: |
-          mkdir -p build/opt/ffmpeg-webrtc/lib
-          cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
-
-          # Create wrapper scripts
-          mkdir -p build/opt/ffmpeg-webrtc/bin
-          cat << EOF > build/opt/ffmpeg-webrtc/bin/ffmpeg-webrtc
-          #!/bin/bash
-          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
-          EOF
-          cat << EOF > build/opt/ffmpeg-webrtc/bin/ffprobe-webrtc
-          #!/bin/bash
-          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
-          EOF
-          chmod +x build/opt/ffmpeg-webrtc/bin/ffmpeg-webrtc build/opt/ffmpeg-webrtc/bin/ffprobe-webrtc
-
-          # Create DEBIAN directory and control file
-          mkdir -p build/DEBIAN
-          cat << EOF > build/DEBIAN/control
-          Package: ffmpeg-webrtc
-          Version: ${{ env.VERSION }}
-          Section: video
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Your Name <your.email@example.com>
-          Description: FFmpeg with WebRTC support
-           This package contains a custom build of FFmpeg with WebRTC support.
-          EOF
+          mkdir -p debian/DEBIAN
+          echo "Package: ffmpeg-custom" > debian/DEBIAN/control
+          echo "Version: ${{ env.VERSION }}" >> debian/DEBIAN/control
+          echo "Architecture: amd64" >> debian/DEBIAN/control
+          echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
+          echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
+          mkdir -p debian/usr/local/bin
+          cp ffmpeg ffprobe debian/usr/local/bin/
 
       - name: Build .deb package
         run: |
-          dpkg-deb --build build ffmpeg-webrtc.deb
+          dpkg-deb --build debian ffmpeg-custom.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -70,6 +48,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./ffmpeg-webrtc.deb
-          asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
+          asset_path: ./ffmpeg-custom.deb
+          asset_name: ffmpeg-custom-${{ env.VERSION }}.deb
           asset_content_type: application/vnd.debian.binary-package
