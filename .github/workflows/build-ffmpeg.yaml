@@ -42,14 +42,19 @@ jobs:
           cp ffmpeg debian/opt/ffmpeg-webrtc/bin/ffmpeg
           cp ffprobe debian/opt/ffmpeg-webrtc/bin/ffprobe
 
+          mkdir -p debian/opt/ffmpeg-webrtc/lib
+          cp /usr/lib/x86_64-linux-gnu/libx264.so.* debian/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libssl.so.* debian/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* debian/opt/ffmpeg-webrtc/lib/
+
           mkdir -p debian/usr/local/bin
           cat << EOF > debian/usr/local/bin/ffmpeg-webrtc
           #!/bin/bash
-          /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
           EOF
           cat << EOF > debian/usr/local/bin/ffprobe-webrtc
           #!/bin/bash
-          /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
           EOF
           chmod +x debian/usr/local/bin/ffmpeg-webrtc debian/usr/local/bin/ffprobe-webrtc
 
@@ -58,7 +63,7 @@ jobs:
           dpkg-deb --build debian ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v2
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
