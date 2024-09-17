@@ -14,33 +14,52 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-shared
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
 
       - name: Build FFmpeg
         run: |
           make -j$(nproc)
           make install DESTDIR=$(pwd)/build
 
-      - name: Create Debian package
+      - name: Prepare package
         run: |
+          mkdir -p build/opt/ffmpeg-webrtc/lib
+          cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
+
+          # Create wrapper scripts
+          mkdir -p build/opt/ffmpeg-webrtc/bin
+          cat << EOF > build/opt/ffmpeg-webrtc/bin/ffmpeg-webrtc
+          #!/bin/bash
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
+          EOF
+          cat << EOF > build/opt/ffmpeg-webrtc/bin/ffprobe-webrtc
+          #!/bin/bash
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
+          EOF
+          chmod +x build/opt/ffmpeg-webrtc/bin/ffmpeg-webrtc build/opt/ffmpeg-webrtc/bin/ffprobe-webrtc
+
+          # Create DEBIAN directory and control file
           mkdir -p build/DEBIAN
-          echo "Package: ffmpeg-webrtc" > build/DEBIAN/control
-          echo "Version: $(echo ${{ github.ref_name }} | sed 's/^v//')" >> build/DEBIAN/control
-          echo "Architecture: amd64" >> build/DEBIAN/control
-          echo "Maintainer: Your Name <your.email@example.com>" >> build/DEBIAN/control
-          echo "Description: Custom FFmpeg build with WebRTC support" >> build/DEBIAN/control
-          echo "Depends: libssl-dev, libx264-dev" >> build/DEBIAN/control
+          cat << EOF > build/DEBIAN/control
+          Package: ffmpeg-webrtc
+          Version: ${{ github.ref_name }}
+          Section: video
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Your Name <your.email@example.com>
+          Description: FFmpeg with WebRTC support
+           This package contains a custom build of FFmpeg with WebRTC support.
+          EOF
 
-          # Create symlinks in /usr/local/bin
-          mkdir -p build/usr/local/bin
-          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg build/usr/local/bin/ffmpeg-webrtc
-          ln -s /opt/ffmpeg-webrtc/bin/ffprobe build/usr/local/bin/ffprobe-webrtc
-
-          dpkg-deb --build --root-owner-group -Zgzip build ffmpeg-webrtc.deb
+      - name: Build .deb package
+        run: |
+          dpkg-deb --build build ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
