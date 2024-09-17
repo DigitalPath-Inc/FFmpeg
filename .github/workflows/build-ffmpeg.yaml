@@ -2,7 +2,7 @@ name: Build ffmpeg-webrtc packages
 
 on:
   release:
-    types: [published, created]
+    types: [created]
 
 jobs:
   build:
@@ -33,7 +33,7 @@ jobs:
           echo "Architecture: amd64" >> build/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> build/DEBIAN/control
           echo "Description: Custom FFmpeg build with WebRTC support" >> build/DEBIAN/control
-          echo "Depends: libssl1.1, libx264-155" >> build/DEBIAN/control
+          echo "Depends: libssl-dev, libx264-dev" >> build/DEBIAN/control
 
           # Create symlinks in /usr/local/bin
           mkdir -p build/usr/local/bin
