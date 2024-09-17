@@ -18,7 +18,7 @@ jobs:
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/usr --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-shared
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-shared
 
       - name: Build FFmpeg
         run: |
@@ -34,6 +34,12 @@ jobs:
           echo "Maintainer: Your Name <your.email@example.com>" >> build/DEBIAN/control
           echo "Description: Custom FFmpeg build with WebRTC support" >> build/DEBIAN/control
           echo "Depends: libssl1.1, libx264-155" >> build/DEBIAN/control
+
+          # Create symlinks in /usr/local/bin
+          mkdir -p build/usr/local/bin
+          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg build/usr/local/bin/ffmpeg-webrtc
+          ln -s /opt/ffmpeg-webrtc/bin/ffprobe build/usr/local/bin/ffprobe-webrtc
+
           dpkg-deb --build --root-owner-group -Zgzip build ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
