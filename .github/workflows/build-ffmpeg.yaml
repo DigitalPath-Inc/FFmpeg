@@ -23,18 +23,18 @@ jobs:
       - name: Build FFmpeg
         run: |
           make -j$(nproc)
-          sudo make install DESTDIR=$(pwd)/debian
+          make install DESTDIR=$(pwd)/build
 
       - name: Create Debian package
         run: |
-          mkdir -p debian/DEBIAN
-          echo "Package: ffmpeg-webrtc" > debian/DEBIAN/control
-          echo "Version: $(echo ${{ github.ref_name }} | sed 's/^v//')" >> debian/DEBIAN/control
-          echo "Architecture: amd64" >> debian/DEBIAN/control
-          echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
-          echo "Description: Custom FFmpeg build with WebRTC support" >> debian/DEBIAN/control
-          echo "Depends: libssl1.1, libx264-155" >> debian/DEBIAN/control
-          dpkg-deb --build --root-owner-group -Zgzip debian ffmpeg-webrtc.deb
+          mkdir -p build/DEBIAN
+          echo "Package: ffmpeg-webrtc" > build/DEBIAN/control
+          echo "Version: $(echo ${{ github.ref_name }} | sed 's/^v//')" >> build/DEBIAN/control
+          echo "Architecture: amd64" >> build/DEBIAN/control
+          echo "Maintainer: Your Name <your.email@example.com>" >> build/DEBIAN/control
+          echo "Description: Custom FFmpeg build with WebRTC support" >> build/DEBIAN/control
+          echo "Depends: libssl1.1, libx264-155" >> build/DEBIAN/control
+          dpkg-deb --build --root-owner-group -Zgzip build ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
