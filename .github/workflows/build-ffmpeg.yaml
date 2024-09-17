@@ -46,9 +46,10 @@ jobs:
 
           # Create DEBIAN directory and control file
           mkdir -p build/DEBIAN
+          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           cat << EOF > build/DEBIAN/control
           Package: ffmpeg-webrtc
-          Version: ${{ github.ref_name }}
+          Version: ${VERSION}
           Section: video
           Priority: optional
           Architecture: amd64
