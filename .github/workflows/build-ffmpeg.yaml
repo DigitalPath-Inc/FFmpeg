@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -14,15 +14,16 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-164 libssl3
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev
 
       - name: Configure FFmpeg
         run: |
-          ./configure --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree
+          ./configure --prefix=/usr --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-shared
 
       - name: Build FFmpeg
         run: |
           make -j$(nproc)
+          sudo make install DESTDIR=$(pwd)/debian
 
       - name: Create Debian package
         run: |
@@ -32,10 +33,7 @@ jobs:
           echo "Architecture: amd64" >> debian/DEBIAN/control
           echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
           echo "Description: Custom FFmpeg build with WebRTC support" >> debian/DEBIAN/control
-          echo "Depends: libssl3, libx264-164" >> debian/DEBIAN/control
-          mkdir -p debian/usr/local/bin
-          cp ffmpeg debian/usr/local/bin/ffmpeg-webrtc
-          cp ffprobe debian/usr/local/bin/ffprobe-webrtc
+          echo "Depends: libssl1.1, libx264-155" >> debian/DEBIAN/control
           dpkg-deb --build --root-owner-group -Zgzip debian ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
