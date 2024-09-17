@@ -1,4 +1,4 @@
-name: Build ffmpeg-custom packages
+name: Build ffmpeg-webrtc packages
 
 on:
   release:
@@ -21,7 +21,7 @@ jobs:
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/usr/local --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
 
       - name: Build FFmpeg
         run: |
@@ -30,17 +30,32 @@ jobs:
       - name: Prepare package
         run: |
           mkdir -p debian/DEBIAN
-          echo "Package: ffmpeg-custom" > debian/DEBIAN/control
-          echo "Version: ${{ env.VERSION }}" >> debian/DEBIAN/control
-          echo "Architecture: amd64" >> debian/DEBIAN/control
-          echo "Maintainer: Your Name <your.email@example.com>" >> debian/DEBIAN/control
-          echo "Description: Custom FFmpeg build" >> debian/DEBIAN/control
+          cat << EOF > debian/DEBIAN/control
+          Package: ffmpeg-webrtc
+          Version: ${{ env.VERSION }}
+          Architecture: amd64
+          Maintainer: Your Name <your.email@example.com>
+          Description: Custom FFmpeg build with WebRTC support
+          EOF
+
+          mkdir -p debian/opt/ffmpeg-webrtc/bin
+          cp ffmpeg debian/opt/ffmpeg-webrtc/bin/ffmpeg
+          cp ffprobe debian/opt/ffmpeg-webrtc/bin/ffprobe
+
           mkdir -p debian/usr/local/bin
-          cp ffmpeg ffprobe debian/usr/local/bin/
+          cat << EOF > debian/usr/local/bin/ffmpeg-webrtc
+          #!/bin/bash
+          /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
+          EOF
+          cat << EOF > debian/usr/local/bin/ffprobe-webrtc
+          #!/bin/bash
+          /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
+          EOF
+          chmod +x debian/usr/local/bin/ffmpeg-webrtc debian/usr/local/bin/ffprobe-webrtc
 
       - name: Build .deb package
         run: |
-          dpkg-deb --build debian ffmpeg-custom.deb
+          dpkg-deb --build debian ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -48,6 +63,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./ffmpeg-custom.deb
-          asset_name: ffmpeg-custom-${{ env.VERSION }}.deb
+          asset_path: ./ffmpeg-webrtc.deb
+          asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
           asset_content_type: application/vnd.debian.binary-package
