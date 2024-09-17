@@ -58,7 +58,7 @@ jobs:
           dpkg-deb --build debian ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
