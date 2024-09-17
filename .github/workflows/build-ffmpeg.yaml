@@ -11,6 +11,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Set version
+        run: echo "VERSION=$(echo ${{ github.ref_name }} | sed 's/^[^0-9]*//')" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -46,10 +49,9 @@ jobs:
 
           # Create DEBIAN directory and control file
           mkdir -p build/DEBIAN
-          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           cat << EOF > build/DEBIAN/control
           Package: ffmpeg-webrtc
-          Version: ${VERSION}
+          Version: ${{ env.VERSION }}
           Section: video
           Priority: optional
           Architecture: amd64
@@ -69,5 +71,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./ffmpeg-webrtc.deb
-          asset_name: ffmpeg-webrtc-${{ github.ref_name }}.deb
+          asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
           asset_content_type: application/vnd.debian.binary-package
