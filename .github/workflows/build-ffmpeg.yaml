@@ -2,7 +2,7 @@ name: Build ffmpeg-webrtc packages
 
 on:
   release:
-    types: [published]
+    types: [created]
 
 jobs:
   build:
@@ -29,8 +29,8 @@ jobs:
 
       - name: Prepare package
         run: |
-          mkdir -p debian/DEBIAN
-          cat << EOF > debian/DEBIAN/control
+          mkdir -p build/DEBIAN
+          cat << EOF > build/DEBIAN/control
           Package: ffmpeg-webrtc
           Version: ${{ env.VERSION }}
           Architecture: amd64
@@ -38,40 +38,40 @@ jobs:
           Description: Custom FFmpeg build with WebRTC support
           EOF
 
-          mkdir -p debian/opt/ffmpeg-webrtc/bin
-          cp ffmpeg debian/opt/ffmpeg-webrtc/bin/ffmpeg
-          cp ffprobe debian/opt/ffmpeg-webrtc/bin/ffprobe
+          mkdir -p build/opt/ffmpeg-webrtc/bin
+          cp ffmpeg build/opt/ffmpeg-webrtc/bin/ffmpeg
+          cp ffprobe build/opt/ffmpeg-webrtc/bin/ffprobe
 
-          mkdir -p debian/opt/ffmpeg-webrtc/lib
-          cp /usr/lib/x86_64-linux-gnu/libx264.so.* debian/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libssl.so.* debian/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* debian/opt/ffmpeg-webrtc/lib/
+          mkdir -p build/opt/ffmpeg-webrtc/lib
+          cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
 
-          mkdir -p debian/usr/local/bin
-          cat << EOF > debian/usr/local/bin/ffmpeg-webrtc
+          mkdir -p build/usr/local/bin
+          cat << EOF > build/usr/local/bin/ffmpeg-webrtc
           #!/bin/bash
           LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
           EOF
-          cat << EOF > debian/usr/local/bin/ffprobe-webrtc
+          cat << EOF > build/usr/local/bin/ffprobe-webrtc
           #!/bin/bash
           LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
           EOF
-          chmod +x debian/usr/local/bin/ffmpeg-webrtc debian/usr/local/bin/ffprobe-webrtc
+          chmod +x build/usr/local/bin/ffmpeg-webrtc build/usr/local/bin/ffprobe-webrtc
 
           # Create post-installation script
-          cat << EOF > debian/DEBIAN/postinst
+          cat << EOF > build/DEBIAN/postinst
           #!/bin/bash
           echo "/opt/ffmpeg-webrtc/lib" > /etc/ld.so.conf.d/ffmpeg-webrtc.conf
           ldconfig
           EOF
-          chmod +x debian/DEBIAN/postinst
+          chmod +x build/DEBIAN/postinst
 
       - name: Build .deb package
         run: |
-          dpkg-deb --build debian ffmpeg-webrtc.deb
+          dpkg-deb --build build ffmpeg-webrtc.deb
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
