@@ -44,6 +44,7 @@ jobs:
 
           mkdir -p build/opt/ffmpeg-webrtc/lib
           cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libx265.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
 
