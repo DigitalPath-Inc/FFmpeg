@@ -21,7 +21,7 @@ jobs:
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-libx265 --enable-gpl --enable-nonfree --enable-static --disable-shared
 
       - name: Build FFmpeg
         run: |
