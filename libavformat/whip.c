@@ -1501,7 +1501,7 @@ static int generate_sdp_offer(AVFormatContext *s)
             "a=msid:FFmpeg video\r\n"
             "a=rtcp-mux\r\n"
             "a=rtcp-rsize\r\n"
-            "a=rtpmap:%u %s/90000\r\n"
+            "a=rtpmap:%u %s/90000\r\n",
             whip->video_payload_type,
             whip->ice_ufrag_local,
             whip->ice_pwd_local,
