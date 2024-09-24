@@ -17,11 +17,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev libsrt-dev
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared --enable-libsrt
 
       - name: Build FFmpeg
         run: |
@@ -46,6 +46,7 @@ jobs:
           cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
 
           mkdir -p build/usr/local/bin
           cat << EOF > build/usr/local/bin/ffmpeg-webrtc
