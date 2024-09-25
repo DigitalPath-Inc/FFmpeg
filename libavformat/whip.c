@@ -2591,7 +2591,7 @@ static int send_rtp_packet(AVFormatContext *s, int payload_type, int64_t pts,
 {
     WHIPContext *whip = s->priv_data;
     uint8_t *buf;
-    int ret, len;
+    int len;
 
     len = 12 + header_size + payload_size;
     buf = av_malloc(len);
@@ -2609,11 +2609,8 @@ static int send_rtp_packet(AVFormatContext *s, int payload_type, int64_t pts,
     memcpy(buf + 12, header, header_size);
     memcpy(buf + 12 + header_size, payload, payload_size);
 
-    ret = avio_write(whip->pb, buf, len);
+    avio_write(whip->pb, buf, len);
     av_free(buf);
-
-    if (ret < 0)
-        return ret;
 
     return 0;
 }
