@@ -61,7 +61,14 @@ jobs:
           cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/local/cuda-11.0/lib64/libcuda.so.1 build/opt/ffmpeg-webrtc/lib/
+          
+          # Find and copy libcuda.so.1
+          LIBCUDA_PATH=$(find /usr -name libcuda.so.1 | head -n 1)
+          if [ -n "$LIBCUDA_PATH" ]; then
+            cp "$LIBCUDA_PATH" build/opt/ffmpeg-webrtc/lib/
+          else
+            echo "Warning: libcuda.so.1 not found. NVENC support may not work."
+          fi
 
           mkdir -p build/usr/local/bin
           cat << EOF > build/usr/local/bin/ffmpeg-webrtc
