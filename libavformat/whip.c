@@ -2612,6 +2612,43 @@ static int packetize_vp9(AVFormatContext *s, const AVPacket *pkt)
     return 0;
 }
 
+static int send_rtp_packet(AVFormatContext *s, int payload_type, int64_t pts,
+                           const uint8_t *header, int header_size,
+                           const uint8_t *payload, int payload_size, int marker)
+{
+    WHIPContext *whip = s->priv_data;
+    uint8_t *buf;
+    int ret, len;
+
+    len = 12 + header_size + payload_size;
+    ret = ffio_ensure_seekback(whip->pb, len);
+    if (ret < 0)
+        return ret;
+    
+    buf = av_malloc(len);
+    if (!buf)
+        return AVERROR(ENOMEM);
+
+    // RTP header
+    buf[0] = 0x80;
+    buf[1] = (marker << 7) | payload_type;
+    AV_WB16(buf + 2, whip->sequence_number++);
+    AV_WB32(buf + 4, pts);
+    AV_WB32(buf + 8, whip->ssrc);
+
+    // Copy header and payload
+    memcpy(buf + 12, header, header_size);
+    memcpy(buf + 12 + header_size, payload, payload_size);
+
+    ret = ffurl_write(whip->rtp_handle, buf, len);
+    av_free(buf);
+
+    if (ret < 0)
+        return ret;
+
+    return 0;
+}
+
 static int whip_write_packet(AVFormatContext *s, AVPacket *pkt)
 {
     int ret;
