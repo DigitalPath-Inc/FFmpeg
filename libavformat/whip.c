@@ -1270,15 +1270,8 @@ static int parse_profile_level(AVFormatContext *s, AVCodecParameters *par)
     uint32_t state;
     WHIPContext *whip = s->priv_data;
 
-    if (par->codec_id != AV_CODEC_ID_H264) {
+    if (par->codec_id != AV_CODEC_ID_H264)
         return ret;
-    } else if (par->codec_id == AV_CODEC_ID_VP9) {
-        // VP9 doesn't use profile and level in the same way as H264
-        // We'll set some default values
-        par->profile = FF_PROFILE_VP9_0;
-        par->level = FF_LEVEL_UNKNOWN;
-        av_log(whip, AV_LOG_VERBOSE, "WHIP: Set default VP9 profile=%d\n", par->profile);
-    }
 
     if (par->profile != FF_PROFILE_UNKNOWN && par->level != FF_LEVEL_UNKNOWN)
         return ret;
@@ -1352,15 +1345,10 @@ static int parse_codec(AVFormatContext *s)
             }
             whip->video_par = par;
 
-            if (par->codec_id != AV_CODEC_ID_H264 && par->codec_id != AV_CODEC_ID_VP9) {
-                av_log(whip, AV_LOG_ERROR, "WHIP: Unsupported video codec %s by RTC, choose h264 or vp9\n",
-                    desc ? desc->name : "unknown");
+            if (par->codec_id != AV_CODEC_ID_H264) {
+                av_log(whip, AV_LOG_ERROR, "WHIP: Unsupported video codec %s by RTC, choose h264\n",
+                       desc ? desc->name : "unknown");
                 return AVERROR_PATCHWELCOME;
-            }
-
-            if ((ret = parse_profile_level(s, par)) < 0) {
-                av_log(whip, AV_LOG_ERROR, "WHIP: Failed to parse profile/level from extradata\n");
-                return AVERROR(EINVAL);
             }
 
             if (par->video_delay > 0) {
@@ -1368,15 +1356,18 @@ static int parse_codec(AVFormatContext *s)
                 return AVERROR_PATCHWELCOME;
             }
 
-            if (par->codec_id == AV_CODEC_ID_H264) {
-                if (par->profile == FF_PROFILE_UNKNOWN) {
-                    av_log(whip, AV_LOG_WARNING, "WHIP: No profile found in extradata, consider baseline\n");
-                    return AVERROR(EINVAL);
-                }
-                if (par->level == FF_LEVEL_UNKNOWN) {
-                    av_log(whip, AV_LOG_WARNING, "WHIP: No level found in extradata, consider 3.1\n");
-                    return AVERROR(EINVAL);
-                }
+            if ((ret = parse_profile_level(s, par)) < 0) {
+                av_log(whip, AV_LOG_ERROR, "WHIP: Failed to parse SPS/PPS from extradata\n");
+                return AVERROR(EINVAL);
+            }
+
+            if (par->profile == FF_PROFILE_UNKNOWN) {
+                av_log(whip, AV_LOG_WARNING, "WHIP: No profile found in extradata, consider baseline\n");
+                return AVERROR(EINVAL);
+            }
+            if (par->level == FF_LEVEL_UNKNOWN) {
+                av_log(whip, AV_LOG_WARNING, "WHIP: No level found in extradata, consider 3.1\n");
+                return AVERROR(EINVAL);
             }
             break;
         case AVMEDIA_TYPE_AUDIO:
@@ -1497,63 +1488,36 @@ static int generate_sdp_offer(AVFormatContext *s)
             vcodec_name = "H264";
             profile_iop &= FF_PROFILE_H264_CONSTRAINED;
             profile &= (~FF_PROFILE_H264_CONSTRAINED);
-
-            av_bprintf(&bp, ""
-                "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
-                "c=IN IP4 0.0.0.0\r\n"
-                "a=ice-ufrag:%s\r\n"
-                "a=ice-pwd:%s\r\n"
-                "a=fingerprint:sha-256 %s\r\n"
-                "a=setup:passive\r\n"
-                "a=mid:1\r\n"
-                "a=sendonly\r\n"
-                "a=msid:FFmpeg video\r\n"
-                "a=rtcp-mux\r\n"
-                "a=rtcp-rsize\r\n"
-                "a=rtpmap:%u %s/90000\r\n"
-                "a=fmtp:%u level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=%02x%02x%02x\r\n"
-                "a=ssrc:%u cname:FFmpeg\r\n"
-                "a=ssrc:%u msid:FFmpeg video\r\n",
-                whip->video_payload_type,
-                whip->ice_ufrag_local,
-                whip->ice_pwd_local,
-                whip->dtls_ctx.dtls_fingerprint,
-                whip->video_payload_type,
-                vcodec_name,
-                whip->video_payload_type,
-                profile,
-                profile_iop,
-                level,
-                whip->video_ssrc,
-                whip->video_ssrc);
-        } else if (whip->video_par->codec_id == AV_CODEC_ID_VP9) {
-            vcodec_name = "VP9";
-            av_bprintf(&bp, ""
-                "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
-                "c=IN IP4 0.0.0.0\r\n"
-                "a=ice-ufrag:%s\r\n"
-                "a=ice-pwd:%s\r\n"
-                "a=fingerprint:sha-256 %s\r\n"
-                "a=setup:passive\r\n"
-                "a=mid:1\r\n"
-                "a=sendonly\r\n"
-                "a=msid:FFmpeg video\r\n"
-                "a=rtcp-mux\r\n"
-                "a=rtcp-rsize\r\n"
-                "a=rtpmap:%u %s/90000\r\n"
-                "a=fmtp:%u profile-id=0\r\n"
-                "a=ssrc:%u cname:FFmpeg\r\n"
-                "a=ssrc:%u msid:FFmpeg video\r\n",
-                whip->video_payload_type,
-                whip->ice_ufrag_local,
-                whip->ice_pwd_local,
-                whip->dtls_ctx.dtls_fingerprint,
-                whip->video_payload_type,
-                vcodec_name,
-                whip->video_payload_type,
-                whip->video_ssrc,
-                whip->video_ssrc);
         }
+
+        av_bprintf(&bp, ""
+            "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
+            "c=IN IP4 0.0.0.0\r\n"
+            "a=ice-ufrag:%s\r\n"
+            "a=ice-pwd:%s\r\n"
+            "a=fingerprint:sha-256 %s\r\n"
+            "a=setup:passive\r\n"
+            "a=mid:1\r\n"
+            "a=sendonly\r\n"
+            "a=msid:FFmpeg video\r\n"
+            "a=rtcp-mux\r\n"
+            "a=rtcp-rsize\r\n"
+            "a=rtpmap:%u %s/90000\r\n"
+            "a=fmtp:%u level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=%02x%02x%02x\r\n"
+            "a=ssrc:%u cname:FFmpeg\r\n"
+            "a=ssrc:%u msid:FFmpeg video\r\n",
+            whip->video_payload_type,
+            whip->ice_ufrag_local,
+            whip->ice_pwd_local,
+            whip->dtls_ctx.dtls_fingerprint,
+            whip->video_payload_type,
+            vcodec_name,
+            whip->video_payload_type,
+            profile,
+            profile_iop,
+            level,
+            whip->video_ssrc,
+            whip->video_ssrc);
     }
 
     if (!av_bprint_is_complete(&bp)) {
@@ -2360,8 +2324,7 @@ static int create_rtp_muxer(AVFormatContext *s)
          * For H.264, consistently utilize the annexb format through the Bitstream Filter (BSF);
          * therefore, we deactivate the extradata detection for the RTP muxer.
          */
-        if (s->streams[i]->codecpar->codec_id == AV_CODEC_ID_H264 ||
-            s->streams[i]->codecpar->codec_id == AV_CODEC_ID_VP9) {
+        if (s->streams[i]->codecpar->codec_id == AV_CODEC_ID_H264) {
             av_freep(&rtp_ctx->streams[i]->codecpar->extradata);
             rtp_ctx->streams[i]->codecpar->extradata_size = 0;
         }
@@ -2711,10 +2674,6 @@ static int whip_check_bitstream(AVFormatContext *s, AVStream *st, const AVPacket
                 b[0], b[1], b[2], b[3], b[4], extradata_isom);
         } else
             whip->h264_annexb_insert_sps_pps = 1;
-    } else if (st->codecpar->codec_id == AV_CODEC_ID_VP9) {
-        // VP9 doesn't require any special bitstream filtering
-        ret = 0;
-        av_log(whip, AV_LOG_VERBOSE, "WHIP: VP9 codec detected, no bitstream filtering required\n");
     }
 
     return ret;
@@ -2742,7 +2701,7 @@ const FFOutputFormat ff_whip_muxer = {
     .p.name             = "whip",
     .p.long_name        = NULL_IF_CONFIG_SMALL("WHIP(WebRTC-HTTP ingestion protocol) muxer"),
     .p.audio_codec      = AV_CODEC_ID_OPUS,
-    .p.video_codec      = AV_CODEC_ID_NONE,
+    .p.video_codec      = AV_CODEC_ID_H264,
     .p.flags            = AVFMT_GLOBALHEADER | AVFMT_NOFILE,
     .p.priv_class       = &whip_muxer_class,
     .priv_data_size     = sizeof(WHIPContext),
