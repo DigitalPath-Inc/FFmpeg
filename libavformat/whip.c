@@ -1270,8 +1270,15 @@ static int parse_profile_level(AVFormatContext *s, AVCodecParameters *par)
     uint32_t state;
     WHIPContext *whip = s->priv_data;
 
-    if (par->codec_id != AV_CODEC_ID_H264)
+    if (par->codec_id != AV_CODEC_ID_H264) {
         return ret;
+    } else if (par->codec_id == AV_CODEC_ID_VP9) {
+        // VP9 doesn't use profile and level in the same way as H264
+        // We'll set some default values
+        par->profile = FF_PROFILE_VP9_0;
+        par->level = FF_LEVEL_UNKNOWN;
+        av_log(whip, AV_LOG_VERBOSE, "WHIP: Set default VP9 profile=%d\n", par->profile);
+    }
 
     if (par->profile != FF_PROFILE_UNKNOWN && par->level != FF_LEVEL_UNKNOWN)
         return ret;
@@ -1351,23 +1358,25 @@ static int parse_codec(AVFormatContext *s)
                 return AVERROR_PATCHWELCOME;
             }
 
+            if ((ret = parse_profile_level(s, par)) < 0) {
+                av_log(whip, AV_LOG_ERROR, "WHIP: Failed to parse profile/level from extradata\n");
+                return AVERROR(EINVAL);
+            }
+
             if (par->video_delay > 0) {
                 av_log(whip, AV_LOG_ERROR, "WHIP: Unsupported B frames by RTC\n");
                 return AVERROR_PATCHWELCOME;
             }
 
-            if ((ret = parse_profile_level(s, par)) < 0) {
-                av_log(whip, AV_LOG_ERROR, "WHIP: Failed to parse SPS/PPS from extradata\n");
-                return AVERROR(EINVAL);
-            }
-
-            if (par->profile == FF_PROFILE_UNKNOWN) {
-                av_log(whip, AV_LOG_WARNING, "WHIP: No profile found in extradata, consider baseline\n");
-                return AVERROR(EINVAL);
-            }
-            if (par->level == FF_LEVEL_UNKNOWN) {
-                av_log(whip, AV_LOG_WARNING, "WHIP: No level found in extradata, consider 3.1\n");
-                return AVERROR(EINVAL);
+            if (par->codec_id == AV_CODEC_ID_H264) {
+                if (par->profile == FF_PROFILE_UNKNOWN) {
+                    av_log(whip, AV_LOG_WARNING, "WHIP: No profile found in extradata, consider baseline\n");
+                    return AVERROR(EINVAL);
+                }
+                if (par->level == FF_LEVEL_UNKNOWN) {
+                    av_log(whip, AV_LOG_WARNING, "WHIP: No level found in extradata, consider 3.1\n");
+                    return AVERROR(EINVAL);
+                }
             }
             break;
         case AVMEDIA_TYPE_AUDIO:
@@ -1532,6 +1541,7 @@ static int generate_sdp_offer(AVFormatContext *s)
                 "a=rtcp-mux\r\n"
                 "a=rtcp-rsize\r\n"
                 "a=rtpmap:%u %s/90000\r\n"
+                "a=fmtp:%u profile-id=0\r\n"
                 "a=ssrc:%u cname:FFmpeg\r\n"
                 "a=ssrc:%u msid:FFmpeg video\r\n",
                 whip->video_payload_type,
@@ -1540,6 +1550,7 @@ static int generate_sdp_offer(AVFormatContext *s)
                 whip->dtls_ctx.dtls_fingerprint,
                 whip->video_payload_type,
                 vcodec_name,
+                whip->video_payload_type,
                 whip->video_ssrc,
                 whip->video_ssrc);
         }
@@ -2703,6 +2714,7 @@ static int whip_check_bitstream(AVFormatContext *s, AVStream *st, const AVPacket
     } else if (st->codecpar->codec_id == AV_CODEC_ID_VP9) {
         // VP9 doesn't require any special bitstream filtering
         ret = 0;
+        av_log(whip, AV_LOG_VERBOSE, "WHIP: VP9 codec detected, no bitstream filtering required\n");
     }
 
     return ret;
