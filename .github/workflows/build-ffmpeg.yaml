@@ -49,6 +49,7 @@ jobs:
           cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libvpx.so.* build/opt/ffmpeg-webrtc/lib/
 
           mkdir -p build/usr/local/bin
           cat << EOF > build/usr/local/bin/ffmpeg-webrtc
