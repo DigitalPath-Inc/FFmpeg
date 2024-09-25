@@ -18,24 +18,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev libsrt-dev
-          # Add NVIDIA SDK installation
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
-          sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
-          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
-          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
-          sudo apt-get update
-          sudo apt-get install -y cuda-nvcc-11-0 cuda-nvrtc-11-0 cuda-nvrtc-dev-11-0 cuda-cudart-11-0 cuda-cudart-dev-11-0
 
-      - name: Install ffnvcodec
-        run: |
-          git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
-          cd nv-codec-headers
-          sudo make install
-          cd ..
+      # Remove the "Install ffnvcodec" step entirely
 
       - name: Configure FFmpeg
         run: |
-          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared --enable-libsrt --enable-nvenc --enable-cuda --enable-cuvid --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared --enable-libsrt
 
       - name: Build FFmpeg
         run: |
@@ -61,14 +49,6 @@ jobs:
           cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
           cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
-          
-          # Find and copy libcuda.so.1
-          LIBCUDA_PATH=$(find /usr -name libcuda.so.1 | head -n 1)
-          if [ -n "$LIBCUDA_PATH" ]; then
-            cp "$LIBCUDA_PATH" build/opt/ffmpeg-webrtc/lib/
-          else
-            echo "Warning: libcuda.so.1 not found. NVENC support may not work."
-          fi
 
           mkdir -p build/usr/local/bin
           cat << EOF > build/usr/local/bin/ffmpeg-webrtc
