@@ -1155,6 +1155,7 @@ typedef struct WHIPContext {
     /* The certificate and private key used for DTLS handshake. */
     char* cert_file;
     char* key_file;
+    int vp9_max_packet_size;
 } WHIPContext;
 
 /**
@@ -2580,6 +2581,37 @@ end:
     return ret;
 }
 
+static int packetize_vp9(AVFormatContext *s, const AVPacket *pkt)
+{
+    WHIPContext *whip = s->priv_data;
+    int remaining = pkt->size;
+    const uint8_t *data = pkt->data;
+
+    while (remaining > 0) {
+        int packet_size = FFMIN(remaining, whip->vp9_max_packet_size);
+        int marker = (remaining == packet_size);
+
+        // Implement VP9 RTP header
+        uint8_t vp9_payload_descriptor[1] = {0};
+        // Set the start of frame bit if this is the first packet
+        if (data == pkt->data) {
+            vp9_payload_descriptor[0] |= 0x10;
+        }
+
+        // Send RTP packet
+        if (send_rtp_packet(s, whip->video_payload_type, pkt->pts,
+                            vp9_payload_descriptor, sizeof(vp9_payload_descriptor),
+                            data, packet_size, marker) < 0) {
+            return AVERROR(EIO);
+        }
+
+        data += packet_size;
+        remaining -= packet_size;
+    }
+
+    return 0;
+}
+
 static int whip_write_packet(AVFormatContext *s, AVPacket *pkt)
 {
     int ret;
@@ -2613,7 +2645,11 @@ static int whip_write_packet(AVFormatContext *s, AVPacket *pkt)
         }
     }
 
-    ret = ff_write_chained(rtp_ctx, 0, pkt, s, 0);
+    if (st->codecpar->codec_id == AV_CODEC_ID_VP9) {
+        ret = packetize_vp9(s, pkt);
+    } else {
+        ret = ff_write_chained(rtp_ctx, 0, pkt, s, 0);
+    }
     if (ret < 0) {
         if (ret == AVERROR(EINVAL)) {
             av_log(whip, AV_LOG_WARNING, "WHIP: Ignore failed to write packet=%dB, ret=%d\n", pkt->size, ret);
@@ -2706,7 +2742,8 @@ static const AVOption options[] = {
     { "pkt_size",           "The maximum size, in bytes, of RTP packets that send out", OFFSET(pkt_size),           AV_OPT_TYPE_INT,    { .i64 = 1200 },    -1, INT_MAX, DEC },
     { "authorization",      "The optional Bearer token for WHIP Authorization",         OFFSET(authorization),      AV_OPT_TYPE_STRING, { .str = NULL },     0,       0, DEC },
     { "cert_file",          "The optional certificate file path for DTLS",              OFFSET(cert_file),          AV_OPT_TYPE_STRING, { .str = NULL },     0,       0, DEC },
-    { "key_file",           "The optional private key file path for DTLS",              OFFSET(key_file),      AV_OPT_TYPE_STRING, { .str = NULL },     0,       0, DEC },
+    { "key_file",           "The optional private key file path for DTLS",              OFFSET(key_file),           AV_OPT_TYPE_STRING, { .str = NULL },     0,       0, DEC },
+    { "vp9_max_packet_size", "Maximum VP9 packet size",                                OFFSET(vp9_max_packet_size), AV_OPT_TYPE_INT,    { .i64 = 1200 },    100, 1400, 0 },
     { NULL },
 };
 
