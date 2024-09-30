@@ -1507,10 +1507,24 @@ static int generate_sdp_offer(AVFormatContext *s)
     if (whip->vp8_par) {
         av_bprintf(&bp, ""
             "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
-            // ... other SDP attributes for VP8 ...
+            "c=IN IP4 0.0.0.0\r\n"
+            "a=ice-ufrag:%s\r\n"
+            "a=ice-pwd:%s\r\n"
+            "a=fingerprint:sha-256 %s\r\n"
+            "a=setup:passive\r\n"
+            "a=mid:1\r\n"
+            "a=sendonly\r\n"
+            "a=msid:FFmpeg video\r\n"
+            "a=rtcp-mux\r\n"
+            "a=rtpmap:%u VP8/%d\r\n"
             "a=ssrc:%u cname:FFmpeg\r\n"
             "a=ssrc:%u msid:FFmpeg video\r\n",
             whip->video_payload_type,
+            whip->ice_ufrag_local,
+            whip->ice_pwd_local,
+            whip->dtls_ctx.dtls_fingerprint,
+            whip->video_payload_type,
+            whip->vp8_par->width ? whip->vp8_par->width : 90000, // Assuming 90000 as the clock rate
             whip->video_ssrc,
             whip->video_ssrc);
     }
@@ -1518,10 +1532,24 @@ static int generate_sdp_offer(AVFormatContext *s)
     if (whip->vp9_par) {
         av_bprintf(&bp, ""
             "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
-            // ... other SDP attributes for VP9 ...
+            "c=IN IP4 0.0.0.0\r\n"
+            "a=ice-ufrag:%s\r\n"
+            "a=ice-pwd:%s\r\n"
+            "a=fingerprint:sha-256 %s\r\n"
+            "a=setup:passive\r\n"
+            "a=mid:2\r\n"
+            "a=sendonly\r\n"
+            "a=msid:FFmpeg video\r\n"
+            "a=rtcp-mux\r\n"
+            "a=rtpmap:%u VP9/%d\r\n"
             "a=ssrc:%u cname:FFmpeg\r\n"
             "a=ssrc:%u msid:FFmpeg video\r\n",
             whip->video_payload_type,
+            whip->ice_ufrag_local,
+            whip->ice_pwd_local,
+            whip->dtls_ctx.dtls_fingerprint,
+            whip->video_payload_type,
+            whip->vp9_par->width ? whip->vp9_par->width : 90000, // Assuming 90000 as the clock rate
             whip->video_ssrc,
             whip->video_ssrc);
     }
