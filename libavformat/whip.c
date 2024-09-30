@@ -122,6 +122,10 @@
 #define WHIP_RTP_PAYLOAD_TYPE_H264 106
 #define WHIP_RTP_PAYLOAD_TYPE_OPUS 111
 
+/* Define VP8 and VP9 payload types */
+#define WHIP_RTP_PAYLOAD_TYPE_VP8 96
+#define WHIP_RTP_PAYLOAD_TYPE_VP9 97
+
 /**
  * The STUN message header, which is 20 bytes long, comprises the
  * STUNMessageType (1B), MessageLength (2B), MagicCookie (4B),
@@ -1068,6 +1072,9 @@ typedef struct WHIPContext {
     AVCodecParameters *audio_par;
     AVCodecParameters *video_par;
 
+    AVCodecParameters *vp8_par;
+    AVCodecParameters *vp9_par;
+
     /**
      * The h264_mp4toannexb Bitstream Filter (BSF) bypasses the AnnexB packet;
      * therefore, it is essential to insert the SPS and PPS before each IDR frame
@@ -1339,6 +1346,22 @@ static int parse_codec(AVFormatContext *s)
         const AVCodecDescriptor *desc = avcodec_descriptor_get(par->codec_id);
         switch (par->codec_type) {
         case AVMEDIA_TYPE_VIDEO:
+            if (par->codec_id == AV_CODEC_ID_VP8) {
+                if (whip->vp8_par) {
+                    av_log(whip, AV_LOG_ERROR, "WHIP: Only one VP8 stream is supported by RTC\n");
+                    return AVERROR(EINVAL);
+                }
+                whip->vp8_par = par;
+                whip->video_payload_type = WHIP_RTP_PAYLOAD_TYPE_VP8;
+            } else if (par->codec_id == AV_CODEC_ID_VP9) {
+                if (whip->vp9_par) {
+                    av_log(whip, AV_LOG_ERROR, "WHIP: Only one VP9 stream is supported by RTC\n");
+                    return AVERROR(EINVAL);
+                }
+                whip->vp9_par = par;
+                whip->video_payload_type = WHIP_RTP_PAYLOAD_TYPE_VP9;
+            }
+
             if (whip->video_par) {
                 av_log(whip, AV_LOG_ERROR, "WHIP: Only one video stream is supported by RTC\n");
                 return AVERROR(EINVAL);
@@ -1479,6 +1502,28 @@ static int generate_sdp_offer(AVFormatContext *s)
             whip->audio_par->ch_layout.nb_channels,
             whip->audio_ssrc,
             whip->audio_ssrc);
+    }
+
+    if (whip->vp8_par) {
+        av_bprintf(&bp, ""
+            "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
+            // ... other SDP attributes for VP8 ...
+            "a=ssrc:%u cname:FFmpeg\r\n"
+            "a=ssrc:%u msid:FFmpeg video\r\n",
+            whip->video_payload_type,
+            whip->video_ssrc,
+            whip->video_ssrc);
+    }
+
+    if (whip->vp9_par) {
+        av_bprintf(&bp, ""
+            "m=video 9 UDP/TLS/RTP/SAVPF %u\r\n"
+            // ... other SDP attributes for VP9 ...
+            "a=ssrc:%u cname:FFmpeg\r\n"
+            "a=ssrc:%u msid:FFmpeg video\r\n",
+            whip->video_payload_type,
+            whip->video_ssrc,
+            whip->video_ssrc);
     }
 
     if (whip->video_par) {
