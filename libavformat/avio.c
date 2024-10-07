@@ -566,9 +566,11 @@ int ffurl_write2(void *urlcontext, const uint8_t *buf, int size)
     URLContext *h = urlcontext;
 
     if (!(h->flags & AVIO_FLAG_WRITE))
+        av_log(h, AV_LOG_ERROR, "URLContext not opened for writing\n");
         return AVERROR(EIO);
     /* avoid sending too big packets */
     if (h->max_packet_size && size > h->max_packet_size)
+        av_log(h, AV_LOG_ERROR, "Packet too large, ignoring\n");
         return AVERROR(EIO);
 
     return retry_transfer_wrapper(h, NULL, buf, size, size, 0);
