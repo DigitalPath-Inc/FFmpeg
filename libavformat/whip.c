@@ -2253,6 +2253,7 @@ static int on_rtp_write_packet(void *opaque, const uint8_t *buf, int buf_size)
     }
 
     ret = ffurl_write(whip->udp_uc, whip->buf, cipher_size);
+    av_log(whip, AV_LOG_DEBUG, "WHIP: Write packet=%dB, cipher=%dB, max_packet=%dB, ret=%d\n", buf_size, cipher_size, whip->udp_uc->max_packet_size, ret);
     if (ret < 0) {
         av_log(whip, AV_LOG_ERROR, "WHIP: Failed to write packet=%dB, ret=%d\n", cipher_size, ret);
         return ret;
