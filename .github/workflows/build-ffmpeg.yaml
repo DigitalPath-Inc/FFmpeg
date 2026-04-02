@@ -107,7 +107,6 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
       artifact_files: ./ffmpeg-webrtc.deb
-      artifact_names: ffmpeg-webrtc-${{ needs.version.outputs.version }}.deb
     secrets:
       gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
       gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
