@@ -88,16 +88,6 @@ jobs:
       - name: Build .deb package
         run: |
           dpkg-deb --build build ffmpeg-webrtc.deb
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./ffmpeg-webrtc.deb
-          asset_name: ffmpeg-webrtc-${{ needs.version.outputs.version }}.deb
-          asset_content_type: application/vnd.debian.binary-package
   release:
     name: Create GitHub Release
     uses: DigitalPath-Inc/.github-private/.github/workflows/github-release.yaml@master
