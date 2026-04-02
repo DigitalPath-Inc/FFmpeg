@@ -45,7 +45,8 @@ extern const SideDataMap ff_sd_global_map[];
 /**
  * avcodec_receive_frame() implementation for decoders.
  */
-int ff_decode_receive_frame(struct AVCodecContext *avctx, struct AVFrame *frame);
+int ff_decode_receive_frame(struct AVCodecContext *avctx, struct AVFrame *frame,
+                            unsigned flags);
 
 /**
  * avcodec_receive_frame() implementation for encoders.
@@ -68,6 +69,10 @@ void ff_decode_flush_buffers(struct AVCodecContext *avctx);
 void ff_encode_flush_buffers(struct AVCodecContext *avctx);
 
 struct AVCodecInternal *ff_decode_internal_alloc(void);
+void ff_decode_internal_sync(struct AVCodecContext *dst,
+                             const struct AVCodecContext *src);
+void ff_decode_internal_uninit(struct AVCodecContext *avctx);
+
 struct AVCodecInternal *ff_encode_internal_alloc(void);
 
 void ff_codec_close(struct AVCodecContext *avctx);
@@ -87,9 +92,10 @@ void ff_thread_flush(struct AVCodecContext *avctx);
  * Submit available packets for decoding to worker threads, return a
  * decoded frame if available. Returns AVERROR(EAGAIN) if none is available.
  *
- * Parameters are the same as FFCodec.receive_frame.
+ * Parameters are the same as FFCodec.receive_frame, plus flags.
  */
-int ff_thread_receive_frame(struct AVCodecContext *avctx, AVFrame *frame);
+int ff_thread_receive_frame(struct AVCodecContext *avctx, AVFrame *frame,
+                            unsigned flags);
 
 /**
  * Do the actual decoding and obtain a decoded frame from the decoder, if
