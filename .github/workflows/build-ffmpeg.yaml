@@ -1,10 +1,16 @@
 name: Build ffmpeg-webrtc packages
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - master
 
 jobs:
+  version:
+    name: Generate release version
+    uses: DigitalPath-Inc/.github-private/.github/workflows/semver-bump.yaml@master
+    with:
+      fail_on_error: false
   build:
     runs-on: ubuntu-latest
     steps:
@@ -17,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev libsrt-dev libvpx-dev
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-openssl-dev dpkg-dev libsrt-dev libvpx-dev
 
       # Remove the "Install ffnvcodec" step entirely
 
@@ -83,3 +89,16 @@ jobs:
           asset_path: ./ffmpeg-webrtc.deb
           asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
           asset_content_type: application/vnd.debian.binary-package
+  release:
+    name: Create GitHub Release
+    uses: DigitalPath-Inc/.github-private/.github/workflows/github-release.yaml@master
+    needs:
+      - version
+      - build
+    with:
+      version: ${{ env.VERSION }}
+      artifact_files: ./ffmpeg-webrtc.deb
+      artifact_names: ffmpeg-webrtc-${{ env.VERSION }}.deb
+    secrets:
+      gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
+      gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
