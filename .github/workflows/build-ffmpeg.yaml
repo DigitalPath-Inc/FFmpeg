@@ -1,0 +1,85 @@
+name: Build ffmpeg-webrtc packages
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set version
+        run: echo "VERSION=$(echo ${{ github.ref_name }} | sed 's/^[^0-9]*//')" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev libsrt-dev libvpx-dev
+
+      # Remove the "Install ffnvcodec" step entirely
+
+      - name: Configure FFmpeg
+        run: |
+          ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared --enable-libsrt --enable-libvpx
+
+      - name: Build FFmpeg
+        run: |
+          make -j$(nproc)
+
+      - name: Prepare package
+        run: |
+          mkdir -p build/DEBIAN
+          cat << EOF > build/DEBIAN/control
+          Package: ffmpeg-webrtc
+          Version: ${{ env.VERSION }}
+          Architecture: amd64
+          Maintainer: Your Name <your.email@example.com>
+          Description: Custom FFmpeg build with WebRTC support
+          EOF
+
+          mkdir -p build/opt/ffmpeg-webrtc/bin
+          cp ffmpeg build/opt/ffmpeg-webrtc/bin/ffmpeg
+          cp ffprobe build/opt/ffmpeg-webrtc/bin/ffprobe
+
+          mkdir -p build/opt/ffmpeg-webrtc/lib
+          cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
+          cp /usr/lib/x86_64-linux-gnu/libvpx.so.* build/opt/ffmpeg-webrtc/lib/
+
+          mkdir -p build/usr/local/bin
+          cat << EOF > build/usr/local/bin/ffmpeg-webrtc
+          #!/bin/bash
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
+          EOF
+          cat << EOF > build/usr/local/bin/ffprobe-webrtc
+          #!/bin/bash
+          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
+          EOF
+          chmod +x build/usr/local/bin/ffmpeg-webrtc build/usr/local/bin/ffprobe-webrtc
+
+          # Create post-installation script
+          cat << EOF > build/DEBIAN/postinst
+          #!/bin/bash
+          echo "/opt/ffmpeg-webrtc/lib" > /etc/ld.so.conf.d/ffmpeg-webrtc.conf
+          ldconfig
+          EOF
+          chmod +x build/DEBIAN/postinst
+
+      - name: Build .deb package
+        run: |
+          dpkg-deb --build build ffmpeg-webrtc.deb
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./ffmpeg-webrtc.deb
+          asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
+          asset_content_type: application/vnd.debian.binary-package
