@@ -25,6 +25,7 @@
 
 #include "golomb.h"
 #include "hevc.h"
+#include "parser_internal.h"
 #include "parse.h"
 #include "ps.h"
 #include "sei.h"
@@ -209,7 +210,7 @@ static int parse_nal_units(AVCodecParserContext *s, const uint8_t *buf,
             ff_hevc_decode_nal_vps(gb, avctx, ps);
             break;
         case HEVC_NAL_SPS:
-            ff_hevc_decode_nal_sps(gb, avctx, ps, 1);
+            ff_hevc_decode_nal_sps(gb, avctx, ps, nal->nuh_layer_id, 1);
             break;
         case HEVC_NAL_PPS:
             ff_hevc_decode_nal_pps(gb, avctx, ps);
@@ -262,7 +263,7 @@ static int hevc_find_frame_end(AVCodecParserContext *s, const uint8_t *buf,
     int i;
 
     for (i = 0; i < buf_size; i++) {
-        int nut;
+        int nut, layer_id;
 
         pc->state64 = (pc->state64 << 8) | buf[i];
 
@@ -270,6 +271,11 @@ static int hevc_find_frame_end(AVCodecParserContext *s, const uint8_t *buf,
             continue;
 
         nut = (pc->state64 >> 2 * 8 + 1) & 0x3F;
+
+        layer_id = (pc->state64 >> 11) & 0x3F;
+        if (layer_id > 0)
+            continue;
+
         // Beginning of access unit
         if ((nut >= HEVC_NAL_VPS && nut <= HEVC_NAL_EOB_NUT) || nut == HEVC_NAL_SEI_PREFIX ||
             (nut >= 41 && nut <= 44) || (nut >= 48 && nut <= 55)) {
@@ -347,9 +353,9 @@ static void hevc_parser_close(AVCodecParserContext *s)
     av_freep(&ctx->pc.buffer);
 }
 
-const AVCodecParser ff_hevc_parser = {
-    .codec_ids      = { AV_CODEC_ID_HEVC },
+const FFCodecParser ff_hevc_parser = {
+    PARSER_CODEC_LIST(AV_CODEC_ID_HEVC),
     .priv_data_size = sizeof(HEVCParserContext),
-    .parser_parse   = hevc_parse,
-    .parser_close   = hevc_parser_close,
+    .parse          = hevc_parse,
+    .close          = hevc_parser_close,
 };
