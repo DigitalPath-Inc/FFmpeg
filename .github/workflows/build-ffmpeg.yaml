@@ -12,6 +12,9 @@ jobs:
     with:
       fail_on_error: false
   build:
+    name: Build ffmpeg-webrtc package
+    needs:
+      - version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,7 +43,7 @@ jobs:
           mkdir -p build/DEBIAN
           cat << EOF > build/DEBIAN/control
           Package: ffmpeg-webrtc
-          Version: ${{ env.VERSION }}
+          Version: ${{ needs.version.outputs.version }}
           Architecture: amd64
           Maintainer: Your Name <your.email@example.com>
           Description: Custom FFmpeg build with WebRTC support
@@ -87,7 +90,7 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./ffmpeg-webrtc.deb
-          asset_name: ffmpeg-webrtc-${{ env.VERSION }}.deb
+          asset_name: ffmpeg-webrtc-${{ needs.version.outputs.version }}.deb
           asset_content_type: application/vnd.debian.binary-package
   release:
     name: Create GitHub Release
@@ -96,9 +99,9 @@ jobs:
       - version
       - build
     with:
-      version: ${{ env.VERSION }}
+      version: ${{ needs.version.outputs.version }}
       artifact_files: ./ffmpeg-webrtc.deb
-      artifact_names: ffmpeg-webrtc-${{ env.VERSION }}.deb
+      artifact_names: ffmpeg-webrtc-${{ needs.version.outputs.version }}.deb
     secrets:
       gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
       gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
