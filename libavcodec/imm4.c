@@ -23,6 +23,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "libavutil/attributes.h"
 #include "libavutil/mem.h"
 #include "libavutil/mem_internal.h"
 #include "libavutil/thread.h"
@@ -453,6 +454,10 @@ static int decode_frame(AVCodecContext *avctx, AVFrame *frame,
     if (ret < 0)
         return ret;
 
+    if (((avctx->width + 15) / 16) * ((avctx->height + 15) / 16) > get_bits_left(gb))
+        return AVERROR_INVALIDDATA;
+
+
     if ((ret = ff_get_buffer(avctx, frame, (frame->flags & AV_FRAME_FLAG_KEY) ? AV_GET_BUFFER_FLAG_REF : 0)) < 0)
         return ret;
 
@@ -514,7 +519,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static void decode_flush(AVCodecContext *avctx)
+static av_cold void decode_flush(AVCodecContext *avctx)
 {
     IMM4Context *s = avctx->priv_data;
 
