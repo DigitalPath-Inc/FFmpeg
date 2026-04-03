@@ -22,7 +22,6 @@ jobs:
     uses: DigitalPath-Inc/.github-private/.github/workflows/github-release.yaml@master
     needs:
       - version
-      - build
     with:
       version: ${{ needs.version.outputs.version }}
     secrets:
