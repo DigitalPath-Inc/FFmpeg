@@ -17,10 +17,22 @@ jobs:
     uses: DigitalPath-Inc/.github-private/.github/workflows/semver-bump.yaml@master
     with:
       fail_on_error: false
+  release:
+    name: Create GitHub Release
+    uses: DigitalPath-Inc/.github-private/.github/workflows/github-release.yaml@master
+    needs:
+      - version
+      - build
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets:
+      gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
+      gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
   build:
     name: Build ffmpeg-webrtc package
     needs:
       - version
+      - release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -89,33 +101,6 @@ jobs:
         run: |
           dpkg-deb --build build ffmpeg-webrtc.deb
 
-      - name: Upload .deb package as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffmpeg-webrtc-deb
-          path: ffmpeg-webrtc.deb
-  release:
-    name: Create GitHub Release
-    uses: DigitalPath-Inc/.github-private/.github/workflows/github-release.yaml@master
-    needs:
-      - version
-      - build
-    with:
-      version: ${{ needs.version.outputs.version }}
-    secrets:
-      gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
-      gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
-  upload:
-    name: Upload .deb package to GitHub Release
-    needs:
-      - release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download .deb package artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ffmpeg-webrtc-deb
-          path: ffmpeg-webrtc.deb
       - name: Github App Token
         uses: actions/create-github-app-token@v3
         id: github-app-token
@@ -123,7 +108,8 @@ jobs:
           app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
           private-key: ${{ secrets.GH_CROSS_REPO_KEY }}
           owner: DigitalPath-Inc
-      - name: Upload .deb package to GitHub Release
+
+      - name: Upload package to release
         run: gh release upload v${{ needs.version.outputs.version }} ffmpeg-webrtc.deb
         env:
           GH_TOKEN: ${{ steps.github-app-token.outputs.token }}
