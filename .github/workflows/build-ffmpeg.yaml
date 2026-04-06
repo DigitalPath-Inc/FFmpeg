@@ -43,9 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev dpkg-dev libsrt-openssl-dev libvpx-dev
-
-      # Remove the "Install ffnvcodec" step entirely
+          sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev libsrt-openssl-dev libvpx-dev
 
       - name: Configure FFmpeg
         run: |
@@ -70,31 +68,9 @@ jobs:
           cp ffmpeg build/opt/ffmpeg-webrtc/bin/ffmpeg
           cp ffprobe build/opt/ffmpeg-webrtc/bin/ffprobe
 
-          mkdir -p build/opt/ffmpeg-webrtc/lib
-          cp /usr/lib/x86_64-linux-gnu/libx264.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libssl.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libcrypto.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libsrt.so.* build/opt/ffmpeg-webrtc/lib/
-          cp /usr/lib/x86_64-linux-gnu/libvpx.so.* build/opt/ffmpeg-webrtc/lib/
-
           mkdir -p build/usr/local/bin
-          cat << EOF > build/usr/local/bin/ffmpeg-webrtc
-          #!/bin/bash
-          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffmpeg "\$@"
-          EOF
-          cat << EOF > build/usr/local/bin/ffprobe-webrtc
-          #!/bin/bash
-          LD_LIBRARY_PATH=/opt/ffmpeg-webrtc/lib:\$LD_LIBRARY_PATH /opt/ffmpeg-webrtc/bin/ffprobe "\$@"
-          EOF
-          chmod +x build/usr/local/bin/ffmpeg-webrtc build/usr/local/bin/ffprobe-webrtc
-
-          # Create post-installation script
-          cat << EOF > build/DEBIAN/postinst
-          #!/bin/bash
-          echo "/opt/ffmpeg-webrtc/lib" > /etc/ld.so.conf.d/ffmpeg-webrtc.conf
-          ldconfig
-          EOF
-          chmod +x build/DEBIAN/postinst
+          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg build/usr/local/bin/ffmpeg-webrtc
+          ln -s /opt/ffmpeg-webrtc/bin/ffprobe build/usr/local/bin/ffprobe-webrtc
 
       - name: Build .deb package
         run: |
