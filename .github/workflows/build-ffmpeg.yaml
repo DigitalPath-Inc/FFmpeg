@@ -28,7 +28,7 @@ jobs:
       gh-app-id: ${{ secrets.GH_CROSS_REPO_APP_ID }}
       gh-app-key: ${{ secrets.GH_CROSS_REPO_KEY }}
   build:
-    name: Build ffmpeg-webrtc package
+    name: Build ffmpeg-webrtc packages
     needs:
       - version
       - release
@@ -37,26 +37,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set version
-        run: echo "VERSION=$(echo ${{ github.ref_name }} | sed 's/^[^0-9]*//')" >> $GITHUB_ENV
-
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential yasm nasm libx264-dev libssl-dev libsrt-openssl-dev libvpx-dev
 
-      - name: Configure FFmpeg
+      - name: Build Ubuntu FFmpeg
         run: |
           ./configure --prefix=/opt/ffmpeg-webrtc --enable-muxer=whip --enable-openssl --enable-libx264 --enable-gpl --enable-nonfree --enable-static --disable-shared --enable-libsrt --enable-libvpx
-
-      - name: Build FFmpeg
-        run: |
           make -j$(nproc)
+          cp ffmpeg ffmpeg-ubuntu
+          cp ffprobe ffprobe-ubuntu
 
-      - name: Prepare package
+      - name: Build Alpine FFmpeg
         run: |
-          mkdir -p build/DEBIAN
-          cat << EOF > build/DEBIAN/control
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            alpine:3.21 sh -c "
+              apk add --no-cache build-base yasm nasm x264-dev openssl-dev srt-dev libvpx-dev pkgconf &&
+              ./configure \
+                --prefix=/opt/ffmpeg-webrtc \
+                --enable-muxer=whip \
+                --enable-openssl \
+                --enable-libx264 \
+                --enable-gpl \
+                --enable-nonfree \
+                --enable-static \
+                --disable-shared \
+                --enable-libsrt \
+                --enable-libvpx &&
+              make -j\$(nproc) &&
+              cp ffmpeg /workspace/ffmpeg-alpine &&
+              cp ffprobe /workspace/ffprobe-alpine
+            "
+
+      - name: Prepare Ubuntu .deb
+        run: |
+          mkdir -p deb/DEBIAN
+          cat << EOF > deb/DEBIAN/control
           Package: ffmpeg-webrtc
           Version: ${{ needs.version.outputs.version }}
           Architecture: amd64
@@ -64,17 +83,27 @@ jobs:
           Description: Custom FFmpeg build with WebRTC support
           EOF
 
-          mkdir -p build/opt/ffmpeg-webrtc/bin
-          cp ffmpeg build/opt/ffmpeg-webrtc/bin/ffmpeg
-          cp ffprobe build/opt/ffmpeg-webrtc/bin/ffprobe
+          mkdir -p deb/opt/ffmpeg-webrtc/bin
+          cp ffmpeg-ubuntu deb/opt/ffmpeg-webrtc/bin/ffmpeg
+          cp ffprobe-ubuntu deb/opt/ffmpeg-webrtc/bin/ffprobe
 
-          mkdir -p build/usr/local/bin
-          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg build/usr/local/bin/ffmpeg-webrtc
-          ln -s /opt/ffmpeg-webrtc/bin/ffprobe build/usr/local/bin/ffprobe-webrtc
+          mkdir -p deb/usr/local/bin
+          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg deb/usr/local/bin/ffmpeg-webrtc
+          ln -s /opt/ffmpeg-webrtc/bin/ffprobe deb/usr/local/bin/ffprobe-webrtc
 
-      - name: Build .deb package
+          dpkg-deb --build deb ffmpeg-webrtc.deb
+
+      - name: Prepare Alpine tarball
         run: |
-          dpkg-deb --build build ffmpeg-webrtc.deb
+          mkdir -p pkg/opt/ffmpeg-webrtc/bin
+          cp ffmpeg-alpine pkg/opt/ffmpeg-webrtc/bin/ffmpeg
+          cp ffprobe-alpine pkg/opt/ffmpeg-webrtc/bin/ffprobe
+
+          mkdir -p pkg/usr/local/bin
+          ln -s /opt/ffmpeg-webrtc/bin/ffmpeg pkg/usr/local/bin/ffmpeg-webrtc
+          ln -s /opt/ffmpeg-webrtc/bin/ffprobe pkg/usr/local/bin/ffprobe-webrtc
+
+          tar -czf ffmpeg-webrtc-alpine.tar.gz -C pkg .
 
       - name: Github App Token
         uses: actions/create-github-app-token@v3
@@ -84,9 +113,9 @@ jobs:
           private-key: ${{ secrets.GH_CROSS_REPO_KEY }}
           owner: DigitalPath-Inc
 
-      - name: Upload package to release
-        run: gh release upload v${{ needs.version.outputs.version }} ffmpeg-webrtc.deb
+      - name: Upload packages to release
+        run: gh release upload v${{ needs.version.outputs.version }} ffmpeg-webrtc.deb ffmpeg-webrtc-alpine.tar.gz
         env:
           GH_TOKEN: ${{ steps.github-app-token.outputs.token }}
 
-  
+
