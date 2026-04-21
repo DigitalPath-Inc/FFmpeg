@@ -55,7 +55,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             alpine:3.21 sh -c "
-              apk add --no-cache build-base yasm nasm x264-dev openssl-dev srt-dev libvpx-dev pkgconf &&
+              apk add --no-cache build-base yasm nasm x264-dev openssl-dev libsrt-dev libvpx-dev pkgconf &&
               ./configure \
                 --prefix=/opt/ffmpeg-webrtc \
                 --enable-muxer=whip \
